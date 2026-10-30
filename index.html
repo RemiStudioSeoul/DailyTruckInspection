@@ -11,8 +11,6 @@
   <style>
     body { -webkit-tap-highlight-color: transparent; }
     canvas { touch-action: none; }
-    
-    /* 인쇄 및 PDF 내보내기용 스타일 */
     @media print {
       @page { size: landscape; margin: 15mm; }
       body { background: white; margin: 0; padding: 0; }
@@ -53,21 +51,21 @@
 
     <div class="mb-4">
       <label class="block text-sm font-bold mb-2">차량번호</label>
-      <input type="text" id="vehicleNum" class="w-full p-3 border rounded-lg bg-gray-50" placeholder="예: 서울80바1234">
+      <input type="text" id="vehicleNum" class="w-full p-3 border rounded-lg bg-gray-50">
     </div>
 
     <div class="mb-4">
       <label class="block text-sm font-bold mb-2">운수종사자명 (기사)</label>
-      <input type="text" id="driverName" class="w-full p-3 border rounded-lg bg-gray-50" placeholder="이름 입력">
+      <input type="text" id="driverName" class="w-full p-3 border rounded-lg bg-gray-50">
     </div>
 
     <div class="mb-6">
       <label class="block text-sm font-bold mb-2">운송사업자명 (회사)</label>
-      <input type="text" id="companyName" class="w-full p-3 border rounded-lg bg-gray-50" placeholder="회사명 입력">
+      <input type="text" id="companyName" class="w-full p-3 border rounded-lg bg-gray-50">
     </div>
 
     <div class="flex flex-col space-y-3">
-      <button onclick="goToInspection()" class="w-full bg-blue-600 text-white font-bold py-4 rounded-lg shadow-lg text-lg">점검 화면으로 이동</button>
+      <button id="btn-go" onclick="goToInspection()" class="w-full bg-blue-600 text-white font-bold py-4 rounded-lg shadow-lg text-lg">점검 화면으로 이동</button>
       <button onclick="viewMonthly()" class="w-full bg-gray-700 text-white font-bold py-4 rounded-lg shadow-lg text-lg">월간 내역 서버에서 불러오기</button>
     </div>
   </div>
@@ -76,7 +74,7 @@
   <div id="screen-inspection" class="max-w-md mx-auto bg-white min-h-screen p-6 shadow-md hidden">
     <h2 class="text-xl font-bold mb-4 border-b pb-2">점검 항목</h2>
     <div id="inspection-items" class="space-y-6 mb-8">
-      <!-- JS로 항목 자동 생성 -->
+      <!-- JS 자동 생성 -->
     </div>
 
     <div class="mb-6">
@@ -93,50 +91,37 @@
     </div>
   </div>
 
-  <!-- 월간 내역 화면 (PDF 인쇄용) -->
+  <!-- 월간 내역 화면 -->
   <div id="screen-monthly" class="max-w-6xl mx-auto bg-white min-h-screen p-4 hidden">
     <div class="flex justify-between items-center mb-6 no-print">
       <button onclick="goBack('screen-monthly')" class="bg-gray-300 text-gray-800 px-5 py-3 rounded-lg font-bold">홈으로</button>
       <button onclick="window.print()" class="bg-blue-600 text-white px-5 py-3 rounded-lg font-bold shadow">PDF 저장 및 인쇄</button>
     </div>
-
     <div id="print-area">
       <h2 class="text-2xl font-bold text-center mb-4">화물자동차 운수종사자 일상점검표</h2>
-      
       <table class="print-table mb-2">
         <tr>
-          <th class="bg-gray-100 w-1/8">점검연월</th>
-          <td id="lbl-month" class="w-1/8 font-bold"></td>
-          <th class="bg-gray-100 w-1/8">운송사업자명</th>
-          <td id="lbl-company" class="w-1/4"></td>
-          <th class="bg-gray-100 w-1/8">차량번호</th>
-          <td id="lbl-vehicle" class="w-1/8"></td>
-          <th class="bg-gray-100 w-1/8">운수종사자명</th>
-          <td id="lbl-driver" class="w-1/8"></td>
+          <th class="bg-gray-100 w-1/8">점검연월</th><td id="lbl-month" class="w-1/8 font-bold"></td>
+          <th class="bg-gray-100 w-1/8">운송사업자명</th><td id="lbl-company" class="w-1/4"></td>
+          <th class="bg-gray-100 w-1/8">차량번호</th><td id="lbl-vehicle" class="w-1/8"></td>
+          <th class="bg-gray-100 w-1/8">운수종사자명</th><td id="lbl-driver" class="w-1/8"></td>
         </tr>
       </table>
-
       <div class="overflow-x-auto">
         <table class="print-table w-full min-w-[800px]">
           <thead>
             <tr class="bg-gray-100">
-              <th rowspan="2" class="w-1/4">점검항목</th>
-              <th colspan="31">점검결과 (양호 O, 불량 X, 미운행시 "미" 기입)</th>
+              <th rowspan="2" class="w-1/4">점검항목</th><th colspan="31">점검결과 (양호 O, 불량 X, 미운행시 "미" 기입)</th>
             </tr>
-            <tr id="days-header" class="bg-gray-100">
-              <!-- JS로 1~31일 자동 생성 -->
-            </tr>
+            <tr id="days-header" class="bg-gray-100"></tr>
           </thead>
-          <tbody id="monthly-tbody">
-            <!-- JS로 항목 및 체크결과 자동 생성 -->
-          </tbody>
+          <tbody id="monthly-tbody"></tbody>
         </table>
       </div>
     </div>
   </div>
 
   <script>
-    // 구글 앱스 스크립트 배포 URL 적용
     const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbww6ttd6gVjsk6oSkhiIvhl_3qjPIi_Zag317wOX8ScTcBd18i6DwY88XHPQdoThnwCGA/exec';
 
     const items = [
@@ -161,7 +146,6 @@
       now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
       document.getElementById('dateTime').value = now.toISOString().slice(0,16);
 
-      // 차량 기본정보 및 서명은 매번 입력하지 않도록 로컬스토리지 유지
       document.getElementById('vehicleNum').value = localStorage.getItem('vehicleNum') || '';
       document.getElementById('driverName').value = localStorage.getItem('driverName') || '';
       document.getElementById('companyName').value = localStorage.getItem('companyName') || '';
@@ -196,13 +180,14 @@
       canvas.addEventListener('mousedown', startPos);
       canvas.addEventListener('mousemove', draw);
       canvas.addEventListener('mouseup', endPos);
+    }
 
-      const savedSign = localStorage.getItem('savedSignature');
-      if (savedSign) {
-        let img = new Image();
-        img.onload = () => ctx.drawImage(img, 0, 0);
-        img.src = savedSign;
-      }
+    function loadSignature(src) {
+      clearSignature();
+      if (!src) return;
+      let img = new Image();
+      img.onload = () => ctx.drawImage(img, 0, 0);
+      img.src = src;
     }
 
     function startPos(e) { isDrawing = true; draw(e); e.preventDefault(); }
@@ -220,20 +205,48 @@
     }
     function clearSignature() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      localStorage.removeItem('savedSignature');
     }
 
-    function goToInspection() {
+    // 변경된 점검화면 이동 (서버에서 기록 조회 후 세팅)
+    async function goToInspection() {
+      const btn = document.getElementById('btn-go');
+      btn.innerText = '기존 데이터 확인 중...';
+      btn.disabled = true;
+
       localStorage.setItem('vehicleNum', document.getElementById('vehicleNum').value);
       localStorage.setItem('driverName', document.getElementById('driverName').value);
       localStorage.setItem('companyName', document.getElementById('companyName').value);
 
-      const runStatus = document.querySelector('input[name="runStatus"]:checked').value;
-      if(runStatus === '휴무') {
-        items.forEach((_, index) => {
-          document.querySelector(`input[name="item${index}"][value="미"]`).checked = true;
-        });
+      const selectedDate = document.getElementById('dateTime').value.split('T')[0];
+
+      try {
+        const response = await fetch(`${SCRIPT_URL}?date=${selectedDate}`);
+        const data = await response.json();
+
+        if (data.exists) {
+          // 서버에 해당 날짜 기록이 있으면 불러오기
+          document.querySelector(`input[name="runStatus"][value="${data.runStatus}"]`).checked = true;
+          data.results.forEach((val, index) => {
+            document.querySelector(`input[name="item${index}"][value="${val}"]`).checked = true;
+          });
+          if (data.signature) loadSignature(data.signature);
+        } else {
+          // 기록이 없으면 현재 상태와 로컬 서명 적용
+          const runStatus = document.querySelector('input[name="runStatus"]:checked').value;
+          if(runStatus === '휴무') {
+            items.forEach((_, index) => { document.querySelector(`input[name="item${index}"][value="미"]`).checked = true; });
+          } else {
+            items.forEach((_, index) => { document.querySelector(`input[name="item${index}"][value="양호"]`).checked = true; });
+          }
+          loadSignature(localStorage.getItem('savedSignature'));
+        }
+      } catch (error) {
+        alert("서버 연결 지연. 오프라인 모드로 열립니다.");
+        loadSignature(localStorage.getItem('savedSignature'));
       }
+
+      btn.innerText = '점검 화면으로 이동';
+      btn.disabled = false;
 
       document.getElementById('screen-start').classList.add('hidden');
       document.getElementById('screen-inspection').classList.remove('hidden');
@@ -245,7 +258,6 @@
       document.getElementById('screen-start').classList.remove('hidden');
     }
 
-    // 서버(구글 시트)로 데이터 전송
     async function finishInspection() {
       const btn = document.getElementById('btn-save');
       btn.innerText = '서버에 저장 중...';
@@ -261,7 +273,7 @@
       });
 
       const payload = {
-        date: document.getElementById('dateTime').value.split('T')[0], // YYYY-MM-DD 형태
+        date: document.getElementById('dateTime').value.split('T')[0],
         vehicleNum: document.getElementById('vehicleNum').value,
         driverName: document.getElementById('driverName').value,
         companyName: document.getElementById('companyName').value,
@@ -271,14 +283,11 @@
       };
 
       try {
-        await fetch(SCRIPT_URL, {
-          method: 'POST',
-          body: JSON.stringify(payload)
-        });
-        alert("오늘의 점검 내역이 구글 시트에 안전하게 저장되었습니다.");
+        await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify(payload) });
+        alert("점검 내역이 성공적으로 덮어쓰기/저장 되었습니다.");
         goBack('screen-inspection');
       } catch (error) {
-        alert("저장 중 오류가 발생했습니다. 네트워크 상태를 확인해주세요.");
+        alert("저장 중 오류가 발생했습니다.");
       } finally {
         btn.innerText = '점검 완료 및 서버 저장';
         btn.disabled = false;
@@ -286,7 +295,6 @@
       }
     }
 
-    // 서버(구글 시트)에서 데이터 불러오기
     async function viewMonthly() {
       document.getElementById('screen-start').classList.add('hidden');
       document.getElementById('screen-monthly').classList.remove('hidden');
@@ -337,7 +345,7 @@
 
         tbody.innerHTML = tbodyHtml;
       } catch(error) {
-        tbody.innerHTML = `<tr><td colspan="32" class="text-center py-10 text-red-600 font-bold">데이터를 불러오지 못했습니다. 인터넷 연결을 확인해주세요.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="32" class="text-center py-10 text-red-600 font-bold">데이터 불러오기 실패.</td></tr>`;
       }
     }
   </script>
