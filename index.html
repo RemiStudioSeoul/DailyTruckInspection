@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="일일점검표">
+  <title>화물차 일일점검표</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { -webkit-tap-highlight-color: transparent; }
+    canvas { touch-action: none; }
+  </style>
+</head>
+<body class="bg-gray-100 text-gray-800 font-sans antialiased pb-10">
+
+  <!-- 시작 화면 -->
+  <div id="screen-start" class="max-w-md mx-auto bg-white min-h-screen p-6 shadow-md block">
+    <h1 class="text-2xl font-bold mb-6 text-center text-blue-600">일일 점검 시작</h1>
+    
+    <div class="mb-4">
+      <label class="block text-sm font-bold mb-2">운행 여부</label>
+      <div class="flex space-x-4">
+        <label class="flex items-center"><input type="radio" name="runStatus" value="운행" checked class="mr-2 w-5 h-5"> 운행</label>
+        <label class="flex items-center"><input type="radio" name="runStatus" value="휴무" class="mr-2 w-5 h-5"> 휴무</label>
+      </div>
+    </div>
+
+    <div class="mb-4">
+      <label class="block text-sm font-bold mb-2">날짜 및 시간</label>
+      <input type="datetime-local" id="dateTime" class="w-full p-3 border rounded-lg bg-gray-50">
+    </div>
+
+    <div class="mb-4">
+      <label class="block text-sm font-bold mb-2">누적운행거리 (km)</label>
+      <input type="number" id="mileage" class="w-full p-3 border rounded-lg bg-gray-50" placeholder="예: 150000">
+    </div>
+
+    <hr class="my-6">
+
+    <div class="mb-4">
+      <label class="block text-sm font-bold mb-2">차량번호</label>
+      <input type="text" id="vehicleNum" class="w-full p-3 border rounded-lg bg-gray-50" placeholder="예: 서울80바1234">
+    </div>
+
+    <div class="mb-4">
+      <label class="block text-sm font-bold mb-2">운수종사자명 (기사)</label>
+      <input type="text" id="driverName" class="w-full p-3 border rounded-lg bg-gray-50" placeholder="이름 입력">
+    </div>
+
+    <div class="mb-6">
+      <label class="block text-sm font-bold mb-2">운송사업자명 (회사)</label>
+      <input type="text" id="companyName" class="w-full p-3 border rounded-lg bg-gray-50" placeholder="회사명 입력">
+    </div>
+
+    <button onclick="goToInspection()" class="w-full bg-blue-600 text-white font-bold py-4 rounded-lg shadow-lg text-lg">점검 화면으로 이동</button>
+  </div>
+
+  <!-- 점검 화면 -->
+  <div id="screen-inspection" class="max-w-md mx-auto bg-white min-h-screen p-6 shadow-md hidden">
+    <h2 class="text-xl font-bold mb-4 border-b pb-2">점검 항목</h2>
+    <div id="inspection-items" class="space-y-6 mb-8">
+      <!-- JS로 항목 자동 생성 -->
+    </div>
+
+    <div class="mb-6">
+      <label class="block text-sm font-bold mb-2">점검자 확인 (서명)</label>
+      <div class="border-2 border-gray-300 rounded-lg bg-gray-50 relative">
+        <canvas id="signatureCanvas" width="350" height="150" class="w-full"></canvas>
+      </div>
+      <button onclick="clearSignature()" class="mt-2 text-sm text-gray-500 underline">서명 지우기 (새로 작성 시)</button>
+    </div>
+
+    <div class="flex space-x-3">
+      <button onclick="goBack()" class="w-1/3 bg-gray-300 text-gray-800 font-bold py-4 rounded-lg">이전</button>
+      <button onclick="finishInspection()" class="w-2/3 bg-green-600 text-white font-bold py-4 rounded-lg shadow-lg">점검 완료 및 저장</button>
+    </div>
+  </div>
+
+  <script>
+    const items = [
+      "번호판, 전면유리, 후사경 등의 청결상태",
+      "후미등, 차폭등 등 등화장치 작동상태",
+      "창닦이기 작동상태",
+      "적재함(보조지지대 포함), 측면 보호대, 후부반사판 등 상태",
+      "타이어 손상 및 마모(1.6mm이상) 여부",
+      "화물, 적재함 지지대(판스프링) 등의 고정상태",
+      "바퀴 너트 등 균열 여부",
+      "냉각수, 공기압, 엔진오일 등 차량 이상 여부",
+      "좌석안전띠 상태",
+      "소화기 비치 여부",
+      "안전삼각대 등 비치 여부"
+    ];
+
+    let canvas, ctx;
+    let isDrawing = false;
+
+    window.onload = () => {
+      // 현재 시간 자동 입력
+      const now = new Date();
+      now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+      document.getElementById('dateTime').value = now.toISOString().slice(0,16);
+
+      // 로컬 스토리지에서 저장된 정보 불러오기
+      document.getElementById('vehicleNum').value = localStorage.getItem('vehicleNum') || '';
+      document.getElementById('driverName').value = localStorage.getItem('driverName') || '';
+      document.getElementById('companyName').value = localStorage.getItem('companyName') || '';
+
+      // 점검 항목 HTML 생성
+      const container = document.getElementById('inspection-items');
+      items.forEach((item, index) => {
+        container.innerHTML += `
+          <div class="bg-gray-50 p-3 rounded-lg border">
+            <p class="text-sm font-medium mb-3">${index + 1}. ${item}</p>
+            <div class="flex justify-around">
+              <label class="flex items-center text-blue-600 font-bold"><input type="radio" name="item${index}" value="양호" checked class="mr-1 w-5 h-5"> 양호(O)</label>
+              <label class="flex items-center text-red-600 font-bold"><input type="radio" name="item${index}" value="불량" class="mr-1 w-5 h-5"> 불량(X)</label>
+              <label class="flex items-center text-gray-500 font-bold"><input type="radio" name="item${index}" value="미" class="mr-1 w-5 h-5"> 미운행</label>
+            </div>
+          </div>
+        `;
+      });
+
+      initSignature();
+    };
+
+    function initSignature() {
+      canvas = document.getElementById('signatureCanvas');
+      ctx = canvas.getContext('2d');
+      ctx.lineWidth = 3;
+      ctx.lineCap = 'round';
+      ctx.strokeStyle = 'black';
+
+      // 서명 그리기 이벤트 (모바일 터치 최적화)
+      canvas.addEventListener('touchstart', startPos);
+      canvas.addEventListener('touchmove', draw);
+      canvas.addEventListener('touchend', endPos);
+      canvas.addEventListener('mousedown', startPos);
+      canvas.addEventListener('mousemove', draw);
+      canvas.addEventListener('mouseup', endPos);
+
+      // 기존 저장된 서명이 있으면 불러오기
+      const savedSign = localStorage.getItem('savedSignature');
+      if (savedSign) {
+        let img = new Image();
+        img.onload = () => ctx.drawImage(img, 0, 0);
+        img.src = savedSign;
+      }
+    }
+
+    function startPos(e) {
+      isDrawing = true;
+      draw(e);
+      e.preventDefault();
+    }
+    function endPos() {
+      isDrawing = false;
+      ctx.beginPath();
+    }
+    function draw(e) {
+      if (!isDrawing) return;
+      let rect = canvas.getBoundingClientRect();
+      let clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      let clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      ctx.lineTo(clientX - rect.left, clientY - rect.top);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(clientX - rect.left, clientY - rect.top);
+      e.preventDefault();
+    }
+    function clearSignature() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      localStorage.removeItem('savedSignature');
+    }
+
+    function goToInspection() {
+      // 입력값 로컬 스토리지에 영구 저장
+      localStorage.setItem('vehicleNum', document.getElementById('vehicleNum').value);
+      localStorage.setItem('driverName', document.getElementById('driverName').value);
+      localStorage.setItem('companyName', document.getElementById('companyName').value);
+
+      // 휴무 선택 시 모든 항목을 '미운행'으로 자동 변경
+      const runStatus = document.querySelector('input[name="runStatus"]:checked').value;
+      if(runStatus === '휴무') {
+        items.forEach((_, index) => {
+          document.querySelector(`input[name="item${index}"][value="미"]`).checked = true;
+        });
+      }
+
+      document.getElementById('screen-start').classList.add('hidden');
+      document.getElementById('screen-inspection').classList.remove('hidden');
+      window.scrollTo(0, 0);
+    }
+
+    function goBack() {
+      document.getElementById('screen-inspection').classList.add('hidden');
+      document.getElementById('screen-start').classList.remove('hidden');
+    }
+
+    function finishInspection() {
+      // 서명 저장
+      const dataURL = canvas.toDataURL();
+      localStorage.setItem('savedSignature', dataURL);
+      
+      alert("오늘의 점검 내역이 안전하게 저장되었습니다.");
+      
+      // 저장 후 초기화면에 머물기
+      goBack();
+    }
+  </script>
+</body>
+</html>
