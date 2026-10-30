@@ -1,2 +1,0 @@
-# DailyTruckInspection
-Daily truck Inspection
